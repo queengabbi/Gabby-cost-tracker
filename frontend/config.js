@@ -1,0 +1,1 @@
+window.API_ENDPOINT = 'https://5vhy1tvqb0.execute-api.us-west-2.amazonaws.com/dev/costs';
