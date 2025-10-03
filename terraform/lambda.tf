@@ -1,22 +1,45 @@
 # Lambda function for cost logging
-data "archive_file" "lambda_cost_logger" {
+data "archive_file" "lambda_logger" {
   type        = "zip"
-  source_dir  = "${path.module}/../lambda/cost_logger"
-  output_path = "${path.module}/files/cost_logger.zip"
+  source_file = "${path.module}/../lambda/logger_lambda.py"
+  output_path = "${path.module}/files/logger_lambda.zip"
 }
 
 resource "aws_lambda_function" "cost_logger" {
-  filename         = data.archive_file.lambda_cost_logger.output_path
-  function_name    = "cloud-cost-logger"
+  filename         = data.archive_file.lambda_logger.output_path
+  function_name    = "cwa-cost-logger"
   role            = aws_iam_role.lambda_role.arn
-  handler         = "main.lambda_handler"
-  source_code_hash = data.archive_file.lambda_cost_logger.output_base64sha256
+  handler         = "logger_lambda.lambda_handler"
+  source_code_hash = data.archive_file.lambda_logger.output_base64sha256
   runtime         = "python3.9"
   timeout         = 30
 
   environment {
     variables = {
-      DYNAMODB_TABLE = aws_dynamodb_table.cost_tracker.name
+      DDB_TABLE = aws_dynamodb_table.cost_tracker.name
+    }
+  }
+}
+
+# Lambda function for API Gateway
+data "archive_file" "lambda_api" {
+  type        = "zip"
+  source_file = "${path.module}/../lambda/api_lambda.py"
+  output_path = "${path.module}/files/api_lambda.zip"
+}
+
+resource "aws_lambda_function" "cost_api" {
+  filename         = data.archive_file.lambda_api.output_path
+  function_name    = "cwa-cost-api"
+  role            = aws_iam_role.lambda_role.arn
+  handler         = "api_lambda.lambda_handler"
+  source_code_hash = data.archive_file.lambda_api.output_base64sha256
+  runtime         = "python3.9"
+  timeout         = 30
+
+  environment {
+    variables = {
+      DDB_TABLE = aws_dynamodb_table.cost_tracker.name
     }
   }
 }
@@ -67,7 +90,7 @@ resource "aws_api_gateway_integration" "lambda" {
 
   integration_http_method = "POST"
   type                   = "AWS_PROXY"
-  uri                    = aws_lambda_function.cost_logger.invoke_arn
+  uri                    = aws_lambda_function.cost_api.invoke_arn
 }
 
 resource "aws_api_gateway_deployment" "api" {
@@ -87,7 +110,7 @@ resource "aws_api_gateway_stage" "api" {
 resource "aws_lambda_permission" "apigw" {
   statement_id  = "AllowAPIGatewayInvoke"
   action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.cost_logger.function_name
+  function_name = aws_lambda_function.cost_api.function_name
   principal     = "apigateway.amazonaws.com"
   source_arn    = "${aws_api_gateway_rest_api.cost_api.execution_arn}/*/*"
 }
