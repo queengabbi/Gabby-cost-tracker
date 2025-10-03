@@ -62,7 +62,8 @@ resource "aws_iam_role_policy" "dynamodb" {
           "dynamodb:Scan"
         ]
         Resource = [
-          aws_dynamodb_table.cost_tracker.arn
+          aws_dynamodb_table.cost_tracker.arn,
+          "${aws_dynamodb_table.cost_tracker.arn}/*"
         ]
       }
     ]
@@ -81,7 +82,32 @@ resource "aws_iam_role_policy" "cloudwatch" {
         Effect = "Allow"
         Action = [
           "cloudwatch:GetMetricStatistics",
-          "cloudwatch:ListMetrics"
+          "cloudwatch:ListMetrics",
+          "cloudwatch:GetMetricData"
+        ]
+        Resource = "*"
+      }
+    ]
+  })
+}
+
+# IAM policy for Cost Explorer access
+resource "aws_iam_role_policy" "cost_explorer" {
+  name = "cost_tracker_cost_explorer_policy"
+  role = aws_iam_role.lambda_role.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "ce:GetCostAndUsage",
+          "ce:GetDimensionValues",
+          "ce:GetReservationCoverage",
+          "ce:GetReservationPurchaseRecommendation",
+          "ce:GetReservationUtilization",
+          "ce:GetUsageReport"
         ]
         Resource = "*"
       }

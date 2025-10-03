@@ -3,9 +3,9 @@ output "api_endpoint" {
   value       = "${aws_api_gateway_stage.api.invoke_url}/costs"
 }
 
-output "cloudfront_url" {
-  description = "CloudFront URL for the website"
-  value       = "https://${aws_cloudfront_distribution.website.domain_name}"
+output "website_url" {
+  description = "S3 website URL"
+  value       = "http://${aws_s3_bucket.website.bucket}.s3-website-${var.aws_region}.amazonaws.com"
 }
 
 output "s3_bucket" {
